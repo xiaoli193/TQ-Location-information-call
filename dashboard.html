@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设备信息仪表板</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "微软雅黑", sans-serif;
+        }
+        body {
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .stat-title {
+            font-size: 1.2rem;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #2196F3;
+        }
+        .data-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .section-title {
+            font-size: 1.5rem;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 18px;
+            padding: 14px;
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+        }
+        .filter-bar input[type="text"] {
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 0.95rem;
+            min-width: 240px;
+            flex: 1 1 240px;
+        }
+        .filter-bar select {
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 0.95rem;
+            background-color: #fff;
+            cursor: pointer;
+        }
+        .filter-bar .checkbox-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.95rem;
+            color: #333;
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+        }
+        .reset-btn {
+            padding: 8px 16px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            background-color: #fff;
+            color: #495057;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+        .reset-btn:hover {
+            background-color: #e9ecef;
+        }
+        .filter-count {
+            margin-left: auto;
+            font-size: 0.9rem;
+            color: #6c757d;
+            white-space: nowrap;
+        }
+        .table-wrapper {
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+            white-space: nowrap;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            color: #333;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .refresh-btn {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-bottom: 20px;
+        }
+        .refresh-btn:hover {
+            background-color: #1976D2;
+        }
+        .data-file-info {
+            color: #888;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+            word-break: break-all;
+        }
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            color: #fff;
+        }
+        .badge-granted { background-color: #4CAF50; }
+        .badge-denied { background-color: #f44336; }
+        .badge-unsupported { background-color: #9e9e9e; }
+        .badge-unknown { background-color: #ff9800; }
+        .empty-hint {
+            text-align: center;
+            color: #999;
+            padding: 20px;
+        }
+        .error-message {
+            color: #f44336;
+            background-color: #ffebee;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>设备信息收集仪表板</h1>
+        
+        <button class="refresh-btn" onclick="loadData()">刷新数据</button>
+        <div id="data-file-info" class="data-file-info"></div>
+        
+        <div id="error-message" class="error-message" style="display: none;"></div>
+        
+        <div id="loading" class="loading" style="display: none;">加载数据中...</div>
+        
+        <div id="stats-section" style="display: none;">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-title">总设备数</div>
+                    <div class="stat-value" id="total-devices">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">有位置信息的设备</div>
+                    <div class="stat-value" id="devices-with-location">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">不同浏览器类型</div>
+                    <div class="stat-value" id="unique-user-agents">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">不同平台</div>
+                    <div class="stat-value" id="unique-platforms">0</div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="device-info-section" style="display: none;">
+            <div class="data-section">
+                <h2 class="section-title">设备信息详情</h2>
+                <div class="filter-bar">
+                    <input type="text" id="device-search" placeholder="搜索 用户代理 / 平台 / 语言 / 时区 / 分辨率">
+                    <select id="device-platform">
+                        <option value="">全部平台</option>
+                    </select>
+                    <select id="device-location-status">
+                        <option value="">全部位置状态</option>
+                        <option value="granted">已获取</option>
+                        <option value="access_denied">拒绝授权</option>
+                        <option value="not_supported">不支持</option>
+                        <option value="unknown">未知</option>
+                    </select>
+                    <select id="device-time">
+                        <option value="all">全部时间</option>
+                        <option value="1h">最近 1 小时</option>
+                        <option value="24h">最近 24 小时</option>
+                        <option value="7d">最近 7 天</option>
+                    </select>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="device-dedup" checked>
+                        过滤重复信息（按设备指纹去重）
+                    </label>
+                    <button class="reset-btn" onclick="resetDeviceFilters()">重置</button>
+                    <span class="filter-count" id="device-count"></span>
+                </div>
+                <div class="table-wrapper"><div id="device-info-table"></div></div>
+            </div>
+        </div>
+        
+        <div id="location-info-section" style="display: none;">
+            <div class="data-section">
+                <h2 class="section-title">位置信息详情</h2>
+                <div class="filter-bar">
+                    <input type="text" id="location-search" placeholder="搜索 用户代理">
+                    <select id="location-time">
+                        <option value="all">全部时间</option>
+                        <option value="1h">最近 1 小时</option>
+                        <option value="24h">最近 24 小时</option>
+                        <option value="7d">最近 7 天</option>
+                    </select>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="location-dedup" checked>
+                        过滤重复信息（相同坐标去重）
+                    </label>
+                    <button class="reset-btn" onclick="resetLocationFilters()">重置</button>
+                    <span class="filter-count" id="location-count"></span>
+                </div>
+                <div class="table-wrapper"><div id="location-info-table"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let deviceData = [];
+        let locationData = [];
+
+        const TIME_RANGES = {
+            '1h': 60 * 60 * 1000,
+            '24h': 24 * 60 * 60 * 1000,
+            '7d': 7 * 24 * 60 * 60 * 1000
+        };
+
+        function escapeHtml(value) {
+            return String(value == null ? '' : value).replace(/[&<>"']/g, function(c) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+            });
+        }
+
+        function withinTime(timestamp, range) {
+            if (range === 'all') return true;
+            const time = new Date(timestamp).getTime();
+            if (isNaN(time)) return false;
+            return (Date.now() - time) <= TIME_RANGES[range];
+        }
+
+        function getLocationStatusKey(device) {
+            if (device.location === 'access_denied') return 'access_denied';
+            if (device.location === 'not_supported') return 'not_supported';
+            return device.location ? 'granted' : 'unknown';
+        }
+
+        function getLocationStatusLabel(device) {
+            const key = getLocationStatusKey(device);
+            if (key === 'granted') return '<span class="badge badge-granted">已获取</span>';
+            if (key === 'access_denied') return '<span class="badge badge-denied">拒绝授权</span>';
+            if (key === 'not_supported') return '<span class="badge badge-unsupported">不支持</span>';
+            return '<span class="badge badge-unknown">未知</span>';
+        }
+
+        // 按指定键去重，保留时间最新的一条
+        function dedupeByLatest(list, keyFn, timeFn) {
+            const map = new Map();
+            list.forEach(function(item) {
+                const key = keyFn(item);
+                const existing = map.get(key);
+                if (!existing) {
+                    map.set(key, item);
+                    return;
+                }
+                const prevTime = new Date(timeFn(existing)).getTime() || 0;
+                const currTime = new Date(timeFn(item)).getTime() || 0;
+                if (currTime >= prevTime) {
+                    map.set(key, item);
+                }
+            });
+            return Array.from(map.values());
+        }
+
+        function deviceFingerprint(device) {
+            return [
+                device.userAgent,
+                device.platform,
+                device.screenResolution,
+                device.timezone,
+                device.language
+            ].join('|');
+        }
+
+        function locationFingerprint(location) {
+            return location.latitude + '|' + location.longitude;
+        }
+
+        // 根据筛选条件计算设备列表
+        function getFilteredDevices() {
+            const search = document.getElementById('device-search').value.trim().toLowerCase();
+            const platform = document.getElementById('device-platform').value;
+            const status = document.getElementById('device-location-status').value;
+            const range = document.getElementById('device-time').value;
+            const dedup = document.getElementById('device-dedup').checked;
+
+            let list = deviceData.filter(function(device) {
+                if (!withinTime(device.timestamp, range)) return false;
+                if (platform && device.platform !== platform) return false;
+                if (status && getLocationStatusKey(device) !== status) return false;
+                if (search) {
+                    const haystack = [
+                        device.userAgent,
+                        device.platform,
+                        device.language,
+                        device.timezone,
+                        device.screenResolution
+                    ].join(' ').toLowerCase();
+                    if (haystack.indexOf(search) === -1) return false;
+                }
+                return true;
+            });
+
+            if (dedup) {
+                list = dedupeByLatest(list, deviceFingerprint, function(d) { return d.timestamp; });
+            }
+
+            list.sort(function(a, b) {
+                return new Date(b.timestamp) - new Date(a.timestamp);
+            });
+            return list;
+        }
+
+        // 根据筛选条件计算位置列表
+        function getFilteredLocations() {
+            const search = document.getElementById('location-search').value.trim().toLowerCase();
+            const range = document.getElementById('location-time').value;
+            const dedup = document.getElementById('location-dedup').checked;
+
+            let list = locationData.filter(function(location) {
+                if (!withinTime(location.deviceTimestamp || location.receivedAt, range)) return false;
+                if (search && String(location.userAgent || '').toLowerCase().indexOf(search) === -1) return false;
+                return true;
+            });
+
+            if (dedup) {
+                list = dedupeByLatest(list, locationFingerprint, function(l) {
+                    return l.receivedAt || l.deviceTimestamp;
+                });
+            }
+
+            list.sort(function(a, b) {
+                return new Date(b.receivedAt || b.deviceTimestamp) - new Date(a.receivedAt || a.deviceTimestamp);
+            });
+            return list;
+        }
+
+        function renderDeviceInfo() {
+            const list = getFilteredDevices();
+            const countEl = document.getElementById('device-count');
+            countEl.textContent = '显示 ' + list.length + ' 条 / 原始 ' + deviceData.length + ' 条';
+
+            if (list.length === 0) {
+                document.getElementById('device-info-table').innerHTML = '<p class="empty-hint">没有符合条件的设备信息</p>';
+                return;
+            }
+
+            let tableHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>时间戳</th>
+                            <th>用户代理</th>
+                            <th>平台</th>
+                            <th>语言</th>
+                            <th>屏幕分辨率</th>
+                            <th>时区</th>
+                            <th>位置状态</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            list.forEach(function(device) {
+                tableHTML += `
+                    <tr>
+                        <td>${escapeHtml(new Date(device.timestamp).toLocaleString())}</td>
+                        <td title="${escapeHtml(device.userAgent)}">${escapeHtml(String(device.userAgent || '').substring(0, 50))}...</td>
+                        <td>${escapeHtml(device.platform)}</td>
+                        <td>${escapeHtml(device.language)}</td>
+                        <td>${escapeHtml(device.screenResolution)}</td>
+                        <td>${escapeHtml(device.timezone)}</td>
+                        <td>${getLocationStatusLabel(device)}</td>
+                    </tr>
+                `;
+            });
+
+            tableHTML += '</tbody></table>';
+            document.getElementById('device-info-table').innerHTML = tableHTML;
+        }
+
+        function renderLocationInfo() {
+            const list = getFilteredLocations();
+            const countEl = document.getElementById('location-count');
+            countEl.textContent = '显示 ' + list.length + ' 条 / 原始 ' + locationData.length + ' 条';
+
+            if (list.length === 0) {
+                document.getElementById('location-info-table').innerHTML = '<p class="empty-hint">没有符合条件的位置信息</p>';
+                return;
+            }
+
+            let tableHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>纬度</th>
+                            <th>经度</th>
+                            <th>精度</th>
+                            <th>设备时间</th>
+                            <th>接收时间</th>
+                            <th>用户代理</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            list.forEach(function(location) {
+                tableHTML += `
+                    <tr>
+                        <td>${escapeHtml(location.latitude)}</td>
+                        <td>${escapeHtml(location.longitude)}</td>
+                        <td>${escapeHtml(location.accuracy)} 米</td>
+                        <td>${escapeHtml(new Date(location.deviceTimestamp).toLocaleString())}</td>
+                        <td>${escapeHtml(new Date(location.receivedAt).toLocaleString())}</td>
+                        <td title="${escapeHtml(location.userAgent)}">${escapeHtml(String(location.userAgent || '').substring(0, 50))}...</td>
+                    </tr>
+                `;
+            });
+
+            tableHTML += '</tbody></table>';
+            document.getElementById('location-info-table').innerHTML = tableHTML;
+        }
+
+        // 刷新平台下拉选项，同时保留当前选择
+        function updatePlatformOptions() {
+            const select = document.getElementById('device-platform');
+            const current = select.value;
+            const platforms = Array.from(new Set(deviceData.map(function(d) { return d.platform; }).filter(Boolean)));
+            select.innerHTML = '<option value="">全部平台</option>' +
+                platforms.map(function(p) {
+                    return '<option value="' + escapeHtml(p) + '">' + escapeHtml(p) + '</option>';
+                }).join('');
+            if (platforms.indexOf(current) !== -1) {
+                select.value = current;
+            }
+        }
+
+        function resetDeviceFilters() {
+            document.getElementById('device-search').value = '';
+            document.getElementById('device-platform').value = '';
+            document.getElementById('device-location-status').value = '';
+            document.getElementById('device-time').value = 'all';
+            document.getElementById('device-dedup').checked = true;
+            renderDeviceInfo();
+        }
+
+        function resetLocationFilters() {
+            document.getElementById('location-search').value = '';
+            document.getElementById('location-time').value = 'all';
+            document.getElementById('location-dedup').checked = true;
+            renderLocationInfo();
+        }
+
+        // 加载统计数据
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const stats = await response.json();
+
+                document.getElementById('total-devices').textContent = stats.totalDevices;
+                document.getElementById('devices-with-location').textContent = stats.devicesWithLocation;
+                document.getElementById('unique-user-agents').textContent = stats.uniqueUserAgents;
+                document.getElementById('unique-platforms').textContent = stats.platforms.length;
+
+                document.getElementById('data-file-info').textContent =
+                    '采集到的数据已实时保存到文件：' + stats.dataFile + '（共 ' + stats.totalDevices + ' 条记录）';
+
+                document.getElementById('stats-section').style.display = 'block';
+            } catch (error) {
+                showError('无法加载统计数据: ' + error.message);
+            }
+        }
+
+        // 加载设备信息
+        async function loadDeviceInfo() {
+            try {
+                const response = await fetch('/api/device-info');
+                deviceData = await response.json();
+
+                updatePlatformOptions();
+                renderDeviceInfo();
+                document.getElementById('device-info-section').style.display = 'block';
+            } catch (error) {
+                showError('无法加载设备信息: ' + error.message);
+            }
+        }
+
+        // 加载位置信息
+        async function loadLocationInfo() {
+            try {
+                const response = await fetch('/api/location-info');
+                locationData = await response.json();
+
+                renderLocationInfo();
+                document.getElementById('location-info-section').style.display = 'block';
+            } catch (error) {
+                showError('无法加载位置信息: ' + error.message);
+            }
+        }
+
+        // 显示错误信息
+        function showError(message) {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        // 隐藏错误信息
+        function hideError() {
+            document.getElementById('error-message').style.display = 'none';
+        }
+
+        // 显示加载状态
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+            hideError();
+        }
+
+        // 隐藏加载状态
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        // 加载所有数据
+        async function loadData() {
+            showLoading();
+
+            try {
+                await Promise.all([
+                    loadStats(),
+                    loadDeviceInfo(),
+                    loadLocationInfo()
+                ]);
+            } catch (error) {
+                showError('加载数据时出错: ' + error.message);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // 绑定筛选控件事件
+        function bindFilters() {
+            ['device-search', 'device-time', 'device-location-status', 'device-platform'].forEach(function(id) {
+                const el = document.getElementById(id);
+                el.addEventListener('input', renderDeviceInfo);
+                el.addEventListener('change', renderDeviceInfo);
+            });
+            document.getElementById('device-dedup').addEventListener('change', renderDeviceInfo);
+
+            ['location-search', 'location-time'].forEach(function(id) {
+                const el = document.getElementById(id);
+                el.addEventListener('input', renderLocationInfo);
+                el.addEventListener('change', renderLocationInfo);
+            });
+            document.getElementById('location-dedup').addEventListener('change', renderLocationInfo);
+        }
+
+        // 页面加载完成后自动加载数据
+        window.addEventListener('load', function() {
+            bindFilters();
+            loadData();
+        });
+
+        // 每30秒自动刷新数据
+        setInterval(loadData, 30000);
+    </script>
+</body>
+</html>

